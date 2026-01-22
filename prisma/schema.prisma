@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  email      String   @unique
+  password   String
+  phone      String?
+  role       Role     @relation(fields: [roleId], references: [id])
+  roleId     String   @db.ObjectId
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  bookings Booking[]
+  sales    Sale[]
+  payments Payment[]
+}
+
+model Role {
+  id    String   @id @default(auto()) @map("_id") @db.ObjectId
+  name  RoleType @unique
+  users User[]
+}
+
+enum RoleType {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+model VehicleCategory {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  name     String    @unique
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  brand       String
+  model       String
+  year        Int
+  category    VehicleCategory @relation(fields: [categoryId], references: [id])
+  categoryId  String          @db.ObjectId
+  rentalPrice Float
+  salePrice   Float
+  status      VehicleStatus   @default(AVAILABLE)
+  images      String[]
+  specs       Json
+  createdAt   DateTime        @default(now())
+
+  bookings    Booking[]
+  sales       Sale[]
+  maintenance Maintenance[]
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  RENTED
+  SOLD
+  MAINTENANCE
+}
+
+model Booking {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  user        User          @relation(fields: [userId], references: [id])
+  userId      String        @db.ObjectId
+  vehicle     Vehicle       @relation(fields: [vehicleId], references: [id])
+  vehicleId   String        @db.ObjectId
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Float
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+
+  payment Payment?
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Sale {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String   @db.ObjectId
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId  String   @db.ObjectId
+  price      Float
+  discount   Float?
+  tax        Float?
+  finalPrice Float
+  createdAt  DateTime @default(now())
+
+  payment Payment?
+}
+
+model Payment {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  user      User          @relation(fields: [userId], references: [id])
+  userId    String        @db.ObjectId
+  amount    Float
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
+  bookingId String?       @unique @db.ObjectId
+  booking   Booking?      @relation(fields: [bookingId], references: [id])
+  saleId    String?       @unique @db.ObjectId
+  sale      Sale?         @relation(fields: [saleId], references: [id])
+  createdAt DateTime      @default(now())
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Maintenance {
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  vehicle     Vehicle           @relation(fields: [vehicleId], references: [id])
+  vehicleId   String            @db.ObjectId
+  description String
+  startDate   DateTime
+  endDate     DateTime?
+  status      MaintenanceStatus @default(ONGOING)
+}
+
+enum MaintenanceStatus {
+  ONGOING
+  COMPLETED
+}
+
+model Report {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  type      ReportType
+  data      Json
+  createdAt DateTime   @default(now())
+}
+
+enum ReportType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
